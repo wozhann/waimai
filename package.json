@@ -1,0 +1,15 @@
+{
+  "name": "waimai-compare",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Compare personalized food-delivery (外卖) prices across Meituan, Ele.me and JD Waimai in one app.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "npm test --workspace @waimai/engine",
+    "build:engine": "npm run build --workspace @waimai/engine",
+    "mobile": "npm start --workspace @waimai/mobile"
+  }
+}

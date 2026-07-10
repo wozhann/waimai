@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "外卖比价",
+    "slug": "waimai-compare",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "assetBundlePatterns": ["**/*"],
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
