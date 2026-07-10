@@ -3,6 +3,7 @@ import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { createDefaultProfile, createMockProviders, type Cart, type UserProfile } from '@waimai/engine';
 import { colors } from './src/theme';
+import { DemoBanner } from './src/components/DemoBanner';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { CartScreen } from './src/screens/CartScreen';
 import { CompareScreen } from './src/screens/CompareScreen';
@@ -23,7 +24,9 @@ export default function App() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar style="dark" />
-      <View style={styles.body}>
+      <DemoBanner />
+      <View style={styles.frame}>
+        <View style={styles.body}>
         {tab === 'compare' ? (
           flow.step === 'search' ? (
             <SearchScreen
@@ -47,11 +50,12 @@ export default function App() {
         ) : (
           <ProfileScreen profile={profile} setProfile={setProfile} />
         )}
-      </View>
+        </View>
 
-      <View style={styles.tabBar}>
-        <TabButton label="比价" active={tab === 'compare'} onPress={() => setTab('compare')} />
-        <TabButton label="我的" active={tab === 'profile'} onPress={() => setTab('profile')} />
+        <View style={styles.tabBar}>
+          <TabButton label="比价" active={tab === 'compare'} onPress={() => setTab('compare')} />
+          <TabButton label="我的" active={tab === 'profile'} onPress={() => setTab('profile')} />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -67,6 +71,8 @@ function TabButton({ label, active, onPress }: { label: string; active: boolean;
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
+  // Centered column so the app reads well on a laptop browser; full width on phones.
+  frame: { flex: 1, width: '100%', maxWidth: 760, alignSelf: 'center' },
   body: { flex: 1, paddingTop: 8 },
   tabBar: {
     flexDirection: 'row',
