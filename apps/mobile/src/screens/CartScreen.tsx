@@ -1,20 +1,48 @@
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { CATALOG, formatYuan, yuan, type Cart } from '@waimai/engine';
+import { useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  CATALOG,
+  PLATFORM_LABELS,
+  formatYuan,
+  parseSmartQuery,
+  suggestCombos,
+  yuan,
+  type Cart,
+  type ComboSuggestion,
+  type PriceProvider,
+  type UserProfile,
+} from '@waimai/engine';
 import { colors, shadow } from '../theme';
 
 interface Props {
   restaurantId: string;
+  providers: PriceProvider[];
+  profile: UserProfile;
   onBack: () => void;
   onCompare: (cart: Cart) => void;
 }
 
-export function CartScreen({ restaurantId, onBack, onCompare }: Props) {
+export function CartScreen({ restaurantId, providers, profile, onBack, onCompare }: Props) {
   const restaurant = useMemo(
     () => CATALOG.find((r) => r.id === restaurantId),
     [restaurantId],
   );
   const [qty, setQty] = useState<Record<string, number>>({});
+  const [showSuggest, setShowSuggest] = useState(false);
+  const [filterText, setFilterText] = useState('');
+  const [suggestions, setSuggestions] = useState<ComboSuggestion[]>([]);
+
+  useEffect(() => {
+    if (!showSuggest) return;
+    let active = true;
+    const filters = parseSmartQuery(filterText) ?? undefined;
+    suggestCombos(providers, restaurantId, profile, { filters, limit: 3 }).then((s) => {
+      if (active) setSuggestions(s);
+    });
+    return () => {
+      active = false;
+    };
+  }, [showSuggest, filterText, providers, profile, restaurantId]);
 
   if (!restaurant) return null;
 
@@ -43,6 +71,46 @@ export function CartScreen({ restaurantId, onBack, onCompare }: Props) {
       <Text style={styles.subtitle}>选择菜品（价格为参考价，各平台到手价将在下一步比较）</Text>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+        <Pressable style={styles.suggestToggle} onPress={() => setShowSuggest((v) => !v)}>
+          <Text style={styles.suggestToggleText}>
+            {showSuggest ? '收起智能配单 ▴' : '智能配单：全组合按到手价排序 ▾'}
+          </Text>
+        </Pressable>
+
+        {showSuggest && (
+          <View style={styles.suggestBox}>
+            <TextInput
+              style={styles.filterInput}
+              placeholder="可选过滤：要汉堡 不要可乐"
+              placeholderTextColor={colors.faint}
+              value={filterText}
+              onChangeText={setFilterText}
+            />
+            {suggestions.length === 0 ? (
+              <Text style={styles.suggestEmpty}>没有组合能满足这些条件</Text>
+            ) : (
+              suggestions.map((s, i) => (
+                <Pressable
+                  key={s.dishes.map((d) => d.dishId).join('+')}
+                  style={styles.suggestRow}
+                  onPress={() => onCompare(s.cart)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.suggestDishes}>
+                      {i + 1}. {s.dishes.map((d) => d.name).join(' + ')}
+                    </Text>
+                    <Text style={styles.suggestMeta}>
+                      最低 {formatYuan(s.cheapest.final)} · {PLATFORM_LABELS[s.cheapest.platform]}
+                      {s.maxSaving > 0 ? ` · 比最贵平台省 ${formatYuan(s.maxSaving)}` : ''}
+                    </Text>
+                  </View>
+                  <Text style={styles.suggestCta}>比价 ›</Text>
+                </Pressable>
+              ))
+            )}
+          </View>
+        )}
+
         {restaurant.dishes.map((d) => (
           <View key={d.id} style={styles.dishRow}>
             <View style={{ flex: 1 }}>
@@ -88,6 +156,38 @@ const styles = StyleSheet.create({
   backText: { color: colors.primary, fontSize: 16, fontWeight: '600' },
   title: { fontSize: 22, fontWeight: '800', color: colors.text, marginTop: 4 },
   subtitle: { fontSize: 13, color: colors.subtext, marginTop: 4, marginBottom: 12 },
+  suggestToggle: { paddingVertical: 6, marginBottom: 8 },
+  suggestToggleText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
+  suggestBox: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12,
+    marginBottom: 12,
+  },
+  filterInput: {
+    backgroundColor: colors.bg,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 10,
+    color: colors.text,
+  },
+  suggestEmpty: { color: colors.faint, fontSize: 13, textAlign: 'center', paddingVertical: 8 },
+  suggestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  suggestDishes: { fontSize: 14, fontWeight: '600', color: colors.text },
+  suggestMeta: { fontSize: 13, color: colors.good, marginTop: 3, fontWeight: '600' },
+  suggestCta: { fontSize: 14, fontWeight: '700', color: colors.primary, marginLeft: 8 },
   dishRow: {
     backgroundColor: colors.card,
     borderRadius: 12,

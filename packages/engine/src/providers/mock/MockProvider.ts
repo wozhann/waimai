@@ -37,7 +37,11 @@ export class MockProvider implements PriceProvider {
           q === '' ||
           r.name.toLowerCase().includes(q) ||
           r.cuisine.toLowerCase().includes(q) ||
-          r.dishes.some((d) => d.name.toLowerCase().includes(q)),
+          r.dishes.some(
+            (d) =>
+              d.name.toLowerCase().includes(q) ||
+              d.tags?.some((t) => t.toLowerCase().includes(q)),
+          ),
       )
       .map((r) => ({
         restaurantId: r.id,
@@ -56,6 +60,7 @@ export class MockProvider implements PriceProvider {
       id: d.id,
       name: d.name,
       basePrice: Math.round(d.basePriceYuan * 100 * this.profile.dishPriceFactor),
+      tags: d.tags,
     }));
 
     const promotions: Promotion[] = [

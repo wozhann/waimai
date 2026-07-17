@@ -12,6 +12,8 @@ export interface CanonicalDish {
   id: string;
   name: string;
   basePriceYuan: number;
+  /** Search keywords for generic terms the name doesn't contain. */
+  tags?: string[];
 }
 
 export interface CanonicalRestaurant {
@@ -34,7 +36,7 @@ export const CATALOG: CanonicalRestaurant[] = [
       { id: 'lz-beef-noodle', name: '招牌牛肉拉面', basePriceYuan: 22 },
       { id: 'lz-cold-dish', name: '凉拌小菜', basePriceYuan: 8 },
       { id: 'lz-lamb-skewer', name: '羊肉串（5串）', basePriceYuan: 15 },
-      { id: 'lz-cola', name: '可乐', basePriceYuan: 5 },
+      { id: 'lz-cola', name: '可乐', basePriceYuan: 5, tags: ['饮料'] },
     ],
   },
   {
@@ -44,10 +46,11 @@ export const CATALOG: CanonicalRestaurant[] = [
     distanceKm: 3.2,
     platforms: ['meituan', 'eleme', 'jd'],
     dishes: [
-      { id: 'kfc-burger', name: '香辣鸡腿堡', basePriceYuan: 24 },
+      { id: 'kfc-burger', name: '香辣鸡腿堡', basePriceYuan: 24, tags: ['汉堡'] },
       { id: 'kfc-nuggets', name: '黄金鸡块（5块）', basePriceYuan: 18 },
+      { id: 'kfc-wings', name: '香辣炸鸡翅（2对）', basePriceYuan: 16 },
       { id: 'kfc-fries', name: '薯条（大）', basePriceYuan: 12 },
-      { id: 'kfc-cola', name: '百事可乐（中）', basePriceYuan: 9 },
+      { id: 'kfc-cola', name: '百事可乐（中）', basePriceYuan: 9, tags: ['饮料'] },
     ],
   },
   {
@@ -73,7 +76,7 @@ export const CATALOG: CanonicalRestaurant[] = [
     dishes: [
       { id: 'mlt-standard', name: '精选麻辣烫（标准份）', basePriceYuan: 28 },
       { id: 'mlt-sesame', name: '麻酱小料', basePriceYuan: 3 },
-      { id: 'mlt-drink', name: '酸梅汤', basePriceYuan: 7 },
+      { id: 'mlt-drink', name: '酸梅汤', basePriceYuan: 7, tags: ['饮料'] },
     ],
   },
 ];

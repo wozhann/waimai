@@ -22,6 +22,8 @@ export interface Dish {
   name: string;
   /** Platform-adjusted price in fen (the same dish can list differently per platform). */
   basePrice: number;
+  /** Search keywords for generic terms the name doesn't contain (香辣鸡腿堡 → 汉堡). */
+  tags?: string[];
 }
 
 /**
