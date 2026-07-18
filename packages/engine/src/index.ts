@@ -17,8 +17,15 @@ export {
 } from './engine/suggestCombos.js';
 export {
   parseNaturalQuery,
+  planFromNaturalQuery,
+  buildMenuSnapshot,
+  rankByPlan,
   suggestByIntent,
   type NaturalQuery,
+  type IntentPlan,
+  type DishMatch,
+  type MenuDish,
+  type RestaurantMenu,
   type IntentSuggestion,
   type IntentOptions,
 } from './engine/intent.js';

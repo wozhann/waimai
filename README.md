@@ -28,10 +28,14 @@ The interesting part. All money is integer 分 (fen) to avoid float drift.
 - **`suggestCombos`** — enumerates *every* dish combination at a restaurant, prices each across all
   platforms, and sorts by cheapest personalized 到手价. Because 满减 thresholds are non-linear, this
   surfaces combos where adding a dish *lowers* the total — deals a human scrolling one app never spots.
-- **`parseNaturalQuery` + `suggestByIntent`** — free-text craving search. A user types
-  「想吃辣的，20元以内，有点汤更好了」; the parser pulls out the budget and negations, then every
-  restaurant's best-fitting combo (by distinct taste-tags covered) is priced across platforms and ranked
-  by fit then price. The matching is the one fuzzy step and is isolated so an LLM matcher can replace it.
+- **Free-text craving search.** A user types 「想吃辣的，20元以内，有点汤更好了」. Understanding the
+  words and pricing the answer are split cleanly:
+  - `IntentPlan` is the seam — *which* dishes matter (+ budget). Two matchers emit it: the deterministic
+    `parseNaturalQuery` + `planFromNaturalQuery` (offline fallback: regex budget + tag matching), and an
+    **OpenAI matcher** (`api/interpret.js` serverless proxy) that reads the real menu and picks dishes,
+    handling synonyms/scenes/portions no tag list covers.
+  - `rankByPlan` consumes the plan and does the exact part: enumerate combos, price across platforms,
+    enforce budget, rank by fit then to-hand price. The LLM never does arithmetic.
 - **`parseSmartQuery` + `smartSearch`** — 要/不要 dish search (「要汉堡 不要可乐」) that auto-builds a
   comparable cart.
 - **`PriceProvider`** — the seam for data. Today: `MockProvider` overlays a per-platform pricing
@@ -65,6 +69,20 @@ npx vercel --prod   # deploy (vercel.json is preconfigured)
 
 The exported site is an installable PWA (manifest + icons + iOS/Android home-screen tags), so users can
 「添加到主屏幕」and run it fullscreen — no app store, no APK, works on iPhone too.
+
+### Enabling the OpenAI craving matcher
+
+The free-text 说需求 search works offline via the deterministic matcher. To turn on the LLM matcher,
+set an OpenAI key on the deployment (server-side only — it never reaches the browser):
+
+```bash
+vercel env add OPENAI_API_KEY production   # paste your sk-... key when prompted
+vercel --prod                              # redeploy so the function picks it up
+```
+
+Without the key, `/api/interpret` returns 501 and the app silently falls back to the local matcher. The
+serverless function (`api/interpret.js`) uses `gpt-4o-mini` and returns only dish ids + a budget; all
+pricing stays in the deterministic engine.
 
 ## Roadmap → real data
 

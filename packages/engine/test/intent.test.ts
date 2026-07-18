@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { parseNaturalQuery, suggestByIntent } from '../src/engine/intent.js';
+import {
+  buildMenuSnapshot,
+  parseNaturalQuery,
+  rankByPlan,
+  suggestByIntent,
+} from '../src/engine/intent.js';
 import { createDefaultProfile, createMockProviders } from '../src/providers/mock/index.js';
 
 const providers = createMockProviders();
@@ -58,6 +63,40 @@ describe('suggestByIntent', () => {
     for (const s of out) {
       expect(s.cheapest.final).toBe(
         s.cheapest.steps.reduce((sum, step) => sum + step.amount, 0),
+      );
+    }
+  });
+});
+
+describe('rankByPlan (LLM-style plan)', () => {
+  it('ranks a relevance-only plan (no aspects) by summed relevance then price', async () => {
+    // Simulates an LLM picking dishes directly, with no taste aspects supplied.
+    const out = await rankByPlan(providers, profile, {
+      budget: 3000,
+      matches: [
+        { dishId: 'mlt-standard', relevance: 3, aspects: [] },
+        { dishId: 'kfc-burger', relevance: 1, aspects: [] },
+      ],
+    });
+    // Both restaurants qualify; 麻辣烫's higher relevance ranks it first.
+    expect(out[0]!.restaurantId).toBe('rest-malatang');
+    expect(out.some((s) => s.restaurantId === 'rest-kfc')).toBe(true);
+  });
+
+  it('honors excludeDishIds and budget from a plan', async () => {
+    const menu = await buildMenuSnapshot(providers);
+    expect(menu.length).toBe(4);
+    const out = await rankByPlan(providers, profile, {
+      budget: 2000,
+      matches: menu.flatMap((r) =>
+        r.dishes.map((d) => ({ dishId: d.dishId, relevance: 1, aspects: [] })),
+      ),
+      excludeDishIds: ['kfc-cola', 'lz-cola', 'mlt-drink'],
+    });
+    for (const s of out) {
+      expect(s.cheapest.final).toBeLessThanOrEqual(2000);
+      expect(s.dishes.some((d) => d.dishId.endsWith('cola') || d.dishId === 'mlt-drink')).toBe(
+        false,
       );
     }
   });

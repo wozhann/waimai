@@ -5,6 +5,7 @@ import {
   formatYuan,
   parseNaturalQuery,
   parseSmartQuery,
+  rankByPlan,
   searchAll,
   smartSearch,
   suggestByIntent,
@@ -17,6 +18,7 @@ import {
 } from '@waimai/engine';
 import { colors, shadow } from '../theme';
 import { PlatformBadge } from '../components/PlatformBadge';
+import { llmInterpret } from '../intent/llmMatcher';
 
 type Mode = 'store' | 'intent';
 
@@ -174,6 +176,7 @@ function IntentSearch({
   const [submitted, setSubmitted] = useState('');
   const [results, setResults] = useState<IntentSuggestion[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [source, setSource] = useState<'ai' | 'local'>('local');
 
   useEffect(() => {
     if (!submitted.trim()) {
@@ -182,13 +185,28 @@ function IntentSearch({
     }
     let active = true;
     setLoading(true);
+    // Always parse a budget locally as a backstop, then prefer the LLM matcher
+    // for understanding; fall back to the deterministic matcher if it's absent.
     const query = parseNaturalQuery(submitted);
-    suggestByIntent(providers, profile, query).then((r) => {
+    (async () => {
+      const plan = await llmInterpret(submitted, providers);
+      if (plan) {
+        if (plan.budget === undefined) plan.budget = query.budget;
+        const r = await rankByPlan(providers, profile, plan);
+        if (active) {
+          setSource('ai');
+          setResults(r);
+          setLoading(false);
+        }
+        return;
+      }
+      const r = await suggestByIntent(providers, profile, query);
       if (active) {
+        setSource('local');
         setResults(r);
         setLoading(false);
       }
-    });
+    })();
     return () => {
       active = false;
     };
@@ -239,7 +257,9 @@ function IntentSearch({
           contentContainerStyle={{ paddingBottom: 24 }}
           ListHeaderComponent={
             <Text style={styles.hint}>
-              {loading ? '正在为你挑选…' : `按匹配度 + 到手价为你排序（共 ${results.length} 家）`}
+              {loading
+                ? '正在为你挑选…'
+                : `${source === 'ai' ? '🤖 AI 理解' : '本地匹配'} · 按匹配度 + 到手价排序（共 ${results.length} 家）`}
             </Text>
           }
           ListEmptyComponent={
