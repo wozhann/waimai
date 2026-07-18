@@ -31,6 +31,7 @@ export default function App() {
           flow.step === 'search' ? (
             <SearchScreen
               providers={providers}
+              profile={profile}
               onSelect={(restaurantId) => setFlow({ step: 'cart', restaurantId })}
               onCompare={(cart) => setFlow({ step: 'results', cart })}
             />

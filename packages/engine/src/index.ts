@@ -15,6 +15,13 @@ export {
   type ComboSuggestion,
   type SuggestOptions,
 } from './engine/suggestCombos.js';
+export {
+  parseNaturalQuery,
+  suggestByIntent,
+  type NaturalQuery,
+  type IntentSuggestion,
+  type IntentOptions,
+} from './engine/intent.js';
 export type { PriceProvider } from './providers/PriceProvider.js';
 export {
   MockProvider,

@@ -25,6 +25,15 @@ The interesting part. All money is integer 分 (fen) to avoid float drift.
   Invariant: `final === sum(steps)`, so the UI can render the itemization and trust the total.
 - **`rankPlatforms`** — prices the same cart on every provider that carries the shop, applies the
   user's personalization, and ranks by final price.
+- **`suggestCombos`** — enumerates *every* dish combination at a restaurant, prices each across all
+  platforms, and sorts by cheapest personalized 到手价. Because 满减 thresholds are non-linear, this
+  surfaces combos where adding a dish *lowers* the total — deals a human scrolling one app never spots.
+- **`parseNaturalQuery` + `suggestByIntent`** — free-text craving search. A user types
+  「想吃辣的，20元以内，有点汤更好了」; the parser pulls out the budget and negations, then every
+  restaurant's best-fitting combo (by distinct taste-tags covered) is priced across platforms and ranked
+  by fit then price. The matching is the one fuzzy step and is isolated so an LLM matcher can replace it.
+- **`parseSmartQuery` + `smartSearch`** — 要/不要 dish search (「要汉堡 不要可乐」) that auto-builds a
+  comparable cart.
 - **`PriceProvider`** — the seam for data. Today: `MockProvider` overlays a per-platform pricing
   "personality" (Meituan leans on 满减, Ele.me on 会员+cheap delivery, JD on a big flat subsidy) onto a
   shared canonical catalog — so the cheapest platform genuinely flips with cart size and membership.
@@ -38,13 +47,24 @@ npm test            # runs the engine's vitest suite
 
 ## The app (`apps/mobile`)
 
-Four screens: **搜索** (search shops/dishes across platforms) → **选菜** (build a cart) →
+Screens: **搜索** — two modes: 找店铺 (search shops/dishes, incl. 要/不要 smart carts) and 说需求
+(free-text craving → ranked suggestions) — → **选菜** (build a cart, with a 智能配单 combo explorer) →
 **比价** (ranked results with expandable per-platform breakdowns) and **我的** (set membership tier and
 toggle coupons — the ranking recomputes from your profile).
 
 ```bash
 npm run mobile      # expo start  (press w for web, or scan the QR with Expo Go)
 ```
+
+### Web / PWA deploy
+
+```bash
+npm run build:web   # builds engine + exports a static PWA to apps/mobile/dist
+npx vercel --prod   # deploy (vercel.json is preconfigured)
+```
+
+The exported site is an installable PWA (manifest + icons + iOS/Android home-screen tags), so users can
+「添加到主屏幕」and run it fullscreen — no app store, no APK, works on iPhone too.
 
 ## Roadmap → real data
 
