@@ -8,8 +8,10 @@ import { SearchScreen } from './src/screens/SearchScreen';
 import { CartScreen } from './src/screens/CartScreen';
 import { CompareScreen } from './src/screens/CompareScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
+import { CaptureScreen } from './src/screens/CaptureScreen';
+import { isCaptureSupported } from './src/capture/liveCapture';
 
-type Tab = 'compare' | 'profile';
+type Tab = 'compare' | 'capture' | 'profile';
 type Flow =
   | { step: 'search' }
   | { step: 'cart'; restaurantId: string }
@@ -51,6 +53,8 @@ export default function App() {
               onBack={() => setFlow({ step: 'cart', restaurantId: flow.cart.restaurantId })}
             />
           )
+        ) : tab === 'capture' ? (
+          <CaptureScreen />
         ) : (
           <ProfileScreen profile={profile} setProfile={setProfile} />
         )}
@@ -58,6 +62,9 @@ export default function App() {
 
         <View style={styles.tabBar}>
           <TabButton label="比价" active={tab === 'compare'} onPress={() => setTab('compare')} />
+          {isCaptureSupported && (
+            <TabButton label="实测" active={tab === 'capture'} onPress={() => setTab('capture')} />
+          )}
           <TabButton label="我的" active={tab === 'profile'} onPress={() => setTab('profile')} />
         </View>
       </View>

@@ -1,0 +1,4 @@
+<resources>
+  <string name="app_name">外卖比价</string>
+  <string name="accessibility_service_description">开启后，当你在美团 / 饿了么 / 淘宝闪购 / 京东等 App 的结算页时，读取当前屏幕上显示的价格明细（小计、满减、红包、配送费、实付等）用于本地比价。仅读取你自己屏幕上的信息，不联网、不上传、不操作其它 App。</string>
+</resources>

@@ -84,9 +84,44 @@ Without the key, `/api/interpret` returns 501 and the app silently falls back to
 serverless function (`api/interpret.js`) uses `gpt-4o-mini` and returns only dish ids + a budget; all
 pricing stays in the deterministic engine.
 
-## Roadmap → real data
+## Real data on Android — the 实测 (live-capture) build
+
+The mock engine proves the *concept*; the personalized real number only exists inside each app, behind
+your login. No legal API exposes it. The honest way to read it is **on your own device, off your own
+screen**: you log in, claim coupons and build the cart yourself, and an **Android Accessibility Service**
+reads the price breakdown already displayed on the 结算 (checkout) page. No network interception, no
+credential handling, nothing leaves the device — the app only reads what you can already see.
+
+This is Android-only and needs a **real APK** (an Accessibility Service cannot exist in a PWA or in
+Expo Go), so the app was prebuilt to a bare native project (`apps/mobile/android/`).
+
+- `WaimaiCaptureService.kt` — watches a pinned allowlist of delivery apps (美团 / 饿了么 / 淘宝闪购 /
+  京东), and when a checkout screen appears, walks the accessibility tree and records the visible text +
+  a best-effort parsed breakdown (`AmountParser.kt`, amounts in fen). Stored locally in `CaptureStore.kt`.
+- `LiveCaptureModule.kt` — the RN bridge: read captures, clear, check/enable the service, live events.
+- `src/capture/*` + `src/screens/CaptureScreen.tsx` — the **实测** tab: enable the service, then see each
+  app's real checkout total, ranked cheapest-first, with a raw-text view used to calibrate the parser.
+- The 实测 tab only shows on an Android build (`isCaptureSupported`); the web PWA is unchanged.
+
+```bash
+cd apps/mobile
+npx expo run:android            # build + install the dev APK on a USB-connected phone
+# then: Settings → Accessibility → 外卖比价 · 读价服务 → enable
+```
+
+> **Personal-use tool.** Reading another app's screen via an accessibility service is against those
+> apps' ToS and can trigger their 风控 (account-risk) systems. This is built for reading *your own*
+> accounts on *your own* device — not a service for others, and it deliberately does **not** intercept
+> traffic or defeat any app protection.
+
+**Calibration is the last mile** (needs the phone): the real 美团外卖/淘宝闪购 package ids and the exact
+label→amount layout of each checkout page must be confirmed against the live apps, then the allowlist in
+`accessibility_service_config.xml` + `WaimaiCaptureService.TARGET_PACKAGES` and the rules in
+`AmountParser.kt` refined from the raw-text dumps.
+
+## Roadmap → real data (the legal, for-others path)
 
 Implement a real `PriceProvider` behind the same interface (start with a *legal* 美团联盟/CPS affiliate
-feed, which also earns commission) in a future `apps/api`; the engine and UI stay unchanged. Truly
-personalized real prices would require the user's logged-in platform session — out of scope here; the
-profile screen stands in for it.
+feed, which also earns commission) in a future `apps/api`; the engine and UI stay unchanged. That path
+gives public deals + commission but never another user's personalized price — which is exactly why the
+personal 实测 build above exists.
