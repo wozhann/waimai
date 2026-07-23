@@ -5,7 +5,7 @@ import {
   rankByPlan,
   suggestByIntent,
 } from '../src/engine/intent.js';
-import { createDefaultProfile, createMockProviders } from '../src/providers/mock/index.js';
+import { CATALOG, createDefaultProfile, createMockProviders } from '../src/providers/mock/index.js';
 
 const providers = createMockProviders();
 const profile = createDefaultProfile();
@@ -85,7 +85,7 @@ describe('rankByPlan (LLM-style plan)', () => {
 
   it('honors excludeDishIds and budget from a plan', async () => {
     const menu = await buildMenuSnapshot(providers);
-    expect(menu.length).toBe(4);
+    expect(menu.length).toBe(CATALOG.length);
     const out = await rankByPlan(providers, profile, {
       budget: 2000,
       matches: menu.flatMap((r) =>

@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  FlatList,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import {
   BROWSE_CATEGORIES,
   PLATFORM_LABELS,
@@ -13,6 +22,7 @@ import {
   suggestByIntent,
   type BrowseDish,
   type Cart,
+  type DishCategory,
   type IntentSuggestion,
   type PriceProvider,
   type RestaurantSummary,
@@ -25,28 +35,21 @@ import { llmInterpret } from '../intent/llmMatcher';
 
 type Mode = 'browse' | 'store' | 'intent';
 
-/** Pick an appetising emoji from a dish's tags (first match wins). */
-const DISH_EMOJI: [string, string][] = [
-  ['汉堡', '🍔'],
-  ['炸鸡', '🍗'],
-  ['烧烤', '🍢'],
-  ['面', '🍜'],
-  ['米饭', '🍚'],
-  ['火锅', '🍲'],
-  ['汤', '🍲'],
-  ['饮料', '🥤'],
-  ['甜', '🍰'],
-  ['凉菜', '🥗'],
-  ['牛肉', '🥩'],
-  ['羊肉', '🥩'],
-  ['鸡肉', '🍗'],
-  ['素', '🥗'],
-];
-
-function dishEmoji(tags: string[]): string {
-  for (const [tag, emoji] of DISH_EMOJI) if (tags.includes(tag)) return emoji;
-  return '🍽️';
-}
+/**
+ * One bundled royalty-free photo per category (offline, shipped in the app).
+ * Generic-but-representative — a burger for 汉堡快餐, noodles for 面食, etc.
+ */
+const CATEGORY_IMAGE: Record<DishCategory, ReturnType<typeof require>> = {
+  pinhaofan: require('../../assets/food/pinhaofan.jpg'),
+  zhengcan: require('../../assets/food/zhengcan.jpg'),
+  hanbao: require('../../assets/food/hanbao.jpg'),
+  mifan: require('../../assets/food/mifan.jpg'),
+  mianshi: require('../../assets/food/mianshi.jpg'),
+  malatang: require('../../assets/food/malatang.jpg'),
+  jiaozi: require('../../assets/food/jiaozi.jpg'),
+  zhaji: require('../../assets/food/zhaji.jpg'),
+  tianpin: require('../../assets/food/tianpin.jpg'),
+};
 
 interface Props {
   providers: PriceProvider[];
@@ -107,7 +110,7 @@ function BrowseFeed({
   profile: UserProfile;
   onCompare: (cart: Cart) => void;
 }) {
-  const [tag, setTag] = useState('');
+  const [category, setCategory] = useState<DishCategory | ''>('');
   const [sort, setSort] = useState<'recommended' | 'cheapest'>('recommended');
   const [dishes, setDishes] = useState<BrowseDish[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,7 +118,7 @@ function BrowseFeed({
   useEffect(() => {
     let active = true;
     setLoading(true);
-    browseDishes(providers, profile, { tag: tag || undefined, sort }).then((d) => {
+    browseDishes(providers, profile, { category: category || undefined, sort }).then((d) => {
       if (active) {
         setDishes(d);
         setLoading(false);
@@ -124,7 +127,7 @@ function BrowseFeed({
     return () => {
       active = false;
     };
-  }, [providers, profile, tag, sort]);
+  }, [providers, profile, category, sort]);
 
   return (
     <>
@@ -136,11 +139,11 @@ function BrowseFeed({
         >
           {BROWSE_CATEGORIES.map((c) => (
             <Pressable
-              key={c.key}
-              style={[styles.catChip, tag === c.tag && styles.catChipActive]}
-              onPress={() => setTag(c.tag)}
+              key={c.key || 'all'}
+              style={[styles.catChip, category === c.key && styles.catChipActive]}
+              onPress={() => setCategory(c.key)}
             >
-              <Text style={[styles.catChipText, tag === c.tag && styles.catChipTextActive]}>
+              <Text style={[styles.catChipText, category === c.key && styles.catChipTextActive]}>
                 {c.label}
               </Text>
             </Pressable>
@@ -168,7 +171,7 @@ function BrowseFeed({
         }
         renderItem={({ item }) => (
           <Pressable style={styles.dishCard} onPress={() => onCompare(item.cart)}>
-            <Text style={styles.dishEmoji}>{dishEmoji(item.tags)}</Text>
+            <Image source={CATEGORY_IMAGE[item.category]} style={styles.dishImage} />
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.cuisine}>
@@ -511,7 +514,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     ...shadow,
   },
-  dishEmoji: { fontSize: 34, marginRight: 12 },
+  dishImage: { width: 60, height: 60, borderRadius: 10, marginRight: 12, backgroundColor: colors.bg },
   priceCol: { alignItems: 'flex-end', marginLeft: 8, minWidth: 84 },
   bestPlatform: { fontSize: 12, color: colors.subtext, fontWeight: '600' },
   bestPrice: { fontSize: 18, fontWeight: '800', color: colors.good, marginTop: 2 },

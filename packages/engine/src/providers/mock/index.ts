@@ -7,7 +7,7 @@ import { PROFILES } from './profiles.js';
 export { MockProvider } from './MockProvider.js';
 export { PROFILES } from './profiles.js';
 export { CATALOG } from './catalog.js';
-export type { CanonicalRestaurant, CanonicalDish } from './catalog.js';
+export type { CanonicalRestaurant, CanonicalDish, DishCategory } from './catalog.js';
 export type { PlatformProfile, ManjianTier } from './profiles.js';
 
 /** The three mock platform providers, ready to hand to the engine. */

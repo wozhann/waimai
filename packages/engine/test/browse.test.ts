@@ -29,10 +29,16 @@ describe('browseDishes', () => {
     expect(savings).toEqual([...savings].sort((a, b) => b - a));
   });
 
-  it('filters by tag', async () => {
-    const spicy = await browseDishes(providers, profile, { tag: '辣' });
-    expect(spicy.length).toBeGreaterThan(0);
-    for (const item of spicy) expect(item.tags).toContain('辣');
+  it('filters by category', async () => {
+    const dumplings = await browseDishes(providers, profile, { category: 'jiaozi' });
+    expect(dumplings.length).toBeGreaterThan(0);
+    for (const item of dumplings) expect(item.category).toBe('jiaozi');
+  });
+
+  it('surfaces 拼好饭 items', async () => {
+    const php = await browseDishes(providers, profile, { category: 'pinhaofan' });
+    expect(php.length).toBeGreaterThan(0);
+    for (const item of php) expect(item.category).toBe('pinhaofan');
   });
 
   it('respects the limit', async () => {

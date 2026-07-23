@@ -46,6 +46,7 @@ export {
   CATALOG,
   type CanonicalRestaurant,
   type CanonicalDish,
+  type DishCategory,
   type PlatformProfile,
   type ManjianTier,
 } from './providers/mock/index.js';

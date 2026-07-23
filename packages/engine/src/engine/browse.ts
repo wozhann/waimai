@@ -1,5 +1,5 @@
 import { rankPlatforms } from './rank.js';
-import { CATALOG } from '../providers/mock/catalog.js';
+import { CATALOG, type DishCategory } from '../providers/mock/catalog.js';
 import type { PriceProvider } from '../providers/PriceProvider.js';
 import type { Cart, Platform, UserProfile } from '../types.js';
 
@@ -12,6 +12,7 @@ import type { Cart, Platform, UserProfile } from '../types.js';
 export interface BrowseDish {
   dishId: string;
   name: string;
+  category: DishCategory;
   tags: string[];
   restaurantId: string;
   restaurantName: string;
@@ -27,24 +28,23 @@ export interface BrowseDish {
 }
 
 export interface BrowseCategory {
-  key: string;
+  /** The DishCategory to filter on; '' means "all". */
+  key: DishCategory | '';
   label: string;
-  /** Tag to filter on; empty means "all". */
-  tag: string;
 }
 
-/** Chips for the feed. Tags line up with the catalog's dish `tags`. */
+/** Chips for the feed — the app-style sections users actually recognise. */
 export const BROWSE_CATEGORIES: BrowseCategory[] = [
-  { key: 'all', label: '全部', tag: '' },
-  { key: 'spicy', label: '辣', tag: '辣' },
-  { key: 'soup', label: '有汤', tag: '汤' },
-  { key: 'noodle', label: '面食', tag: '面' },
-  { key: 'rice', label: '米饭', tag: '米饭' },
-  { key: 'burger', label: '汉堡', tag: '汉堡' },
-  { key: 'fried', label: '炸鸡', tag: '炸鸡' },
-  { key: 'bbq', label: '烧烤', tag: '烧烤' },
-  { key: 'veg', label: '素', tag: '素' },
-  { key: 'drink', label: '饮料', tag: '饮料' },
+  { key: '', label: '全部' },
+  { key: 'pinhaofan', label: '拼好饭' },
+  { key: 'zhengcan', label: '品质正餐' },
+  { key: 'hanbao', label: '汉堡快餐' },
+  { key: 'mifan', label: '米饭快餐' },
+  { key: 'mianshi', label: '面食' },
+  { key: 'malatang', label: '麻辣烫' },
+  { key: 'jiaozi', label: '饺子小吃' },
+  { key: 'zhaji', label: '炸鸡炸串' },
+  { key: 'tianpin', label: '甜品饮品' },
 ];
 
 /**
@@ -55,8 +55,8 @@ export const BROWSE_CATEGORIES: BrowseCategory[] = [
 const MIN_BROWSE_YUAN = 6;
 
 export interface BrowseOptions {
-  /** Keep only dishes carrying this tag (empty/undefined = all). */
-  tag?: string;
+  /** Keep only dishes in this section (empty/undefined = all). */
+  category?: DishCategory | '';
   /**
    * `recommended` (default) leads with the dishes where the app you pick matters
    * most (biggest cross-platform saving) — the whole point of comparing.
@@ -76,13 +76,13 @@ export async function browseDishes(
   profile: UserProfile,
   options: BrowseOptions = {},
 ): Promise<BrowseDish[]> {
-  const { tag, sort = 'recommended', limit } = options;
+  const { category, sort = 'recommended', limit } = options;
   const out: BrowseDish[] = [];
 
   for (const restaurant of CATALOG) {
     for (const dish of restaurant.dishes) {
       if (dish.basePriceYuan < MIN_BROWSE_YUAN) continue;
-      if (tag && !(dish.tags ?? []).includes(tag)) continue;
+      if (category && dish.category !== category) continue;
       const cart: Cart = {
         restaurantId: restaurant.id,
         lines: [{ dishId: dish.id, qty: 1 }],
@@ -93,6 +93,7 @@ export async function browseDishes(
       out.push({
         dishId: dish.id,
         name: dish.name,
+        category: dish.category,
         tags: dish.tags ?? [],
         restaurantId: restaurant.id,
         restaurantName: restaurant.name,

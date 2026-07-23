@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CATALOG,
   createDefaultProfile,
   createMockProviders,
   rankPlatforms,
@@ -86,7 +87,7 @@ describe('rankPlatforms', () => {
 describe('searchAll', () => {
   it('merges platform coverage per canonical restaurant', async () => {
     const hits = await searchAll(providers, '');
-    expect(hits).toHaveLength(4);
+    expect(hits).toHaveLength(CATALOG.length);
 
     const malatang = hits.find((h) => h.restaurantId === 'rest-malatang')!;
     expect(malatang.platforms.sort()).toEqual(['eleme', 'meituan']);

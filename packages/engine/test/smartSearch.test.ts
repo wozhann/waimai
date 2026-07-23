@@ -71,11 +71,19 @@ describe('smartSearch', () => {
     expect(matches).toHaveLength(0);
   });
 
-  it('matches generic terms via dish tags (要饮料 不要可乐 → 酸梅汤)', async () => {
-    // Every cola is tagged 饮料 but refused; only 杨国福's 酸梅汤 survives.
+  it('matches generic terms via dish tags, refusing excluded ones (要饮料 不要可乐)', async () => {
     const matches = await smartSearch(providers, { include: ['饮料'], exclude: ['可乐'] });
-    expect(matches.map((m) => m.restaurant.restaurantId)).toEqual(['rest-malatang']);
-    expect(matches[0]!.pickedDishes).toEqual([{ dishId: 'mlt-drink', name: '酸梅汤' }]);
+    const ids = matches.map((m) => m.restaurant.restaurantId);
+    // Shops with a non-cola drink survive (酸梅汤 / 果茶 / 豆浆)…
+    expect(ids).toContain('rest-malatang');
+    expect(ids).toContain('rest-shuyi');
+    // …while shops whose only 饮料 is 可乐 (refused) drop out.
+    expect(ids).not.toContain('rest-kfc');
+    expect(ids).not.toContain('rest-lanzhou');
+    // No picked dish is ever a 可乐.
+    for (const m of matches) {
+      expect(m.pickedDishes.every((d) => !d.name.includes('可乐'))).toBe(true);
+    }
   });
 
   it('returns no matches when there are no wanted terms', async () => {
