@@ -60,7 +60,7 @@ interface Props {
 }
 
 export function SearchScreen({ providers, profile, onSelect, onCompare }: Props) {
-  const [mode, setMode] = useState<Mode>('store');
+  const [mode, setMode] = useState<Mode>('browse');
 
   return (
     <View style={styles.container}>
