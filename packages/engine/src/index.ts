@@ -29,6 +29,13 @@ export {
   type IntentSuggestion,
   type IntentOptions,
 } from './engine/intent.js';
+export {
+  browseDishes,
+  BROWSE_CATEGORIES,
+  type BrowseDish,
+  type BrowseCategory,
+  type BrowseOptions,
+} from './engine/browse.js';
 export type { PriceProvider } from './providers/PriceProvider.js';
 export {
   MockProvider,

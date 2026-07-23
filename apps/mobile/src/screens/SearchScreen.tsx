@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
+  BROWSE_CATEGORIES,
   PLATFORM_LABELS,
+  browseDishes,
   formatYuan,
   parseNaturalQuery,
   parseSmartQuery,
@@ -9,6 +11,7 @@ import {
   searchAll,
   smartSearch,
   suggestByIntent,
+  type BrowseDish,
   type Cart,
   type IntentSuggestion,
   type PriceProvider,
@@ -20,7 +23,30 @@ import { colors, shadow } from '../theme';
 import { PlatformBadge } from '../components/PlatformBadge';
 import { llmInterpret } from '../intent/llmMatcher';
 
-type Mode = 'store' | 'intent';
+type Mode = 'browse' | 'store' | 'intent';
+
+/** Pick an appetising emoji from a dish's tags (first match wins). */
+const DISH_EMOJI: [string, string][] = [
+  ['汉堡', '🍔'],
+  ['炸鸡', '🍗'],
+  ['烧烤', '🍢'],
+  ['面', '🍜'],
+  ['米饭', '🍚'],
+  ['火锅', '🍲'],
+  ['汤', '🍲'],
+  ['饮料', '🥤'],
+  ['甜', '🍰'],
+  ['凉菜', '🥗'],
+  ['牛肉', '🥩'],
+  ['羊肉', '🥩'],
+  ['鸡肉', '🍗'],
+  ['素', '🥗'],
+];
+
+function dishEmoji(tags: string[]): string {
+  for (const [tag, emoji] of DISH_EMOJI) if (tags.includes(tag)) return emoji;
+  return '🍽️';
+}
 
 interface Props {
   providers: PriceProvider[];
@@ -39,11 +65,14 @@ export function SearchScreen({ providers, profile, onSelect, onCompare }: Props)
       <Text style={styles.subtitle}>一次搜索，比较各平台到手价</Text>
 
       <View style={styles.segment}>
+        <SegmentButton label="逛吃" active={mode === 'browse'} onPress={() => setMode('browse')} />
         <SegmentButton label="找店铺" active={mode === 'store'} onPress={() => setMode('store')} />
         <SegmentButton label="说需求" active={mode === 'intent'} onPress={() => setMode('intent')} />
       </View>
 
-      {mode === 'store' ? (
+      {mode === 'browse' ? (
+        <BrowseFeed providers={providers} profile={profile} onCompare={onCompare} />
+      ) : mode === 'store' ? (
         <StoreSearch providers={providers} onSelect={onSelect} onCompare={onCompare} />
       ) : (
         <IntentSearch providers={providers} profile={profile} onCompare={onCompare} />
@@ -65,6 +94,106 @@ function SegmentButton({
     <Pressable style={[styles.segBtn, active && styles.segBtnActive]} onPress={onPress}>
       <Text style={[styles.segText, active && styles.segTextActive]}>{label}</Text>
     </Pressable>
+  );
+}
+
+/** Default landing: a scrollable dish feed you browse to decide, then tap to compare. */
+function BrowseFeed({
+  providers,
+  profile,
+  onCompare,
+}: {
+  providers: PriceProvider[];
+  profile: UserProfile;
+  onCompare: (cart: Cart) => void;
+}) {
+  const [tag, setTag] = useState('');
+  const [sort, setSort] = useState<'recommended' | 'cheapest'>('recommended');
+  const [dishes, setDishes] = useState<BrowseDish[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    browseDishes(providers, profile, { tag: tag || undefined, sort }).then((d) => {
+      if (active) {
+        setDishes(d);
+        setLoading(false);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [providers, profile, tag, sort]);
+
+  return (
+    <>
+      <View style={styles.chipsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsContent}
+        >
+          {BROWSE_CATEGORIES.map((c) => (
+            <Pressable
+              key={c.key}
+              style={[styles.catChip, tag === c.tag && styles.catChipActive]}
+              onPress={() => setTag(c.tag)}
+            >
+              <Text style={[styles.catChipText, tag === c.tag && styles.catChipTextActive]}>
+                {c.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
+      <View style={styles.sortRow}>
+        <Text style={styles.sortHint}>
+          {loading ? '正在配好各平台到手价…' : `${dishes.length} 道菜 · 点一道看三家比价`}
+        </Text>
+        <Pressable
+          onPress={() => setSort((s) => (s === 'recommended' ? 'cheapest' : 'recommended'))}
+        >
+          <Text style={styles.sortToggle}>{sort === 'recommended' ? '推荐排序 ⇅' : '便宜优先 ⇅'}</Text>
+        </Pressable>
+      </View>
+
+      <FlatList
+        data={dishes}
+        keyExtractor={(d) => d.dishId}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        ListEmptyComponent={
+          loading ? null : <Text style={styles.empty}>这个口味暂时没有菜，换个标签试试</Text>
+        }
+        renderItem={({ item }) => (
+          <Pressable style={styles.dishCard} onPress={() => onCompare(item.cart)}>
+            <Text style={styles.dishEmoji}>{dishEmoji(item.tags)}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.name}>{item.name}</Text>
+              <Text style={styles.cuisine}>
+                {item.restaurantName} · {item.distanceKm}km
+              </Text>
+              <View style={styles.badges}>
+                {item.platforms.map((p) => (
+                  <PlatformBadge key={p} platform={p} small />
+                ))}
+              </View>
+            </View>
+            <View style={styles.priceCol}>
+              <Text style={styles.bestPlatform}>🏆 {PLATFORM_LABELS[item.cheapestPlatform]}</Text>
+              <Text style={styles.bestPrice}>
+                {formatYuan(item.cheapestFinal)}
+                <Text style={styles.qi}> 起</Text>
+              </Text>
+              {item.maxSaving > 0 && (
+                <Text style={styles.saving}>省 {formatYuan(item.maxSaving)}</Text>
+              )}
+            </View>
+          </Pressable>
+        )}
+      />
+    </>
   );
 }
 
@@ -350,6 +479,44 @@ const styles = StyleSheet.create({
   },
   chipText: { color: colors.text, fontSize: 14 },
   hint: { fontSize: 13, color: colors.subtext, marginBottom: 10 },
+  chipsRow: { marginBottom: 10 },
+  chipsContent: { gap: 8, paddingRight: 8 },
+  catChip: {
+    backgroundColor: colors.card,
+    borderRadius: 18,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  catChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  catChipText: { fontSize: 14, fontWeight: '600', color: colors.subtext },
+  catChipTextActive: { color: '#fff' },
+  sortRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  sortHint: { fontSize: 13, color: colors.subtext, flex: 1 },
+  sortToggle: { fontSize: 13, fontWeight: '700', color: colors.primary, marginLeft: 8 },
+  dishCard: {
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadow,
+  },
+  dishEmoji: { fontSize: 34, marginRight: 12 },
+  priceCol: { alignItems: 'flex-end', marginLeft: 8, minWidth: 84 },
+  bestPlatform: { fontSize: 12, color: colors.subtext, fontWeight: '600' },
+  bestPrice: { fontSize: 18, fontWeight: '800', color: colors.good, marginTop: 2 },
+  qi: { fontSize: 12, fontWeight: '600', color: colors.good },
+  saving: { fontSize: 12, color: colors.good, fontWeight: '600', marginTop: 2 },
   row: {
     backgroundColor: colors.card,
     borderRadius: 14,
