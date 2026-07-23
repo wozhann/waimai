@@ -14,11 +14,21 @@ import java.io.File
 object CaptureStore {
   private const val FILE = "waimai_captures.json"
   private const val MAX = 100
+  // A checkout page emits many near-identical frames as it loads/animates. If the
+  // newest record is the same app at the same to-hand price within this window,
+  // we replace it with the newer (more settled) read instead of adding a card.
+  private const val COALESCE_WINDOW_MS = 30000L
   private val lock = Any()
 
   fun add(context: Context, record: JSONObject) {
     synchronized(lock) {
       val arr = readArray(context)
+      val lastIdx = arr.length() - 1
+      if (lastIdx >= 0 && isSameOrder(arr.optJSONObject(lastIdx), record)) {
+        arr.put(lastIdx, record) // replace in place — keep one card, latest values
+        file(context).writeText(arr.toString())
+        return
+      }
       arr.put(record)
       val trimmed =
           if (arr.length() > MAX) {
@@ -27,6 +37,16 @@ object CaptureStore {
           } else arr
       file(context).writeText(trimmed.toString())
     }
+  }
+
+  /** Same delivery app + same parsed final price, captured close together in time. */
+  private fun isSameOrder(a: JSONObject?, b: JSONObject): Boolean {
+    a ?: return false
+    if (a.optString("packageName") != b.optString("packageName")) return false
+    val fa = a.optJSONObject("parsed")?.optInt("finalFen", Int.MIN_VALUE) ?: Int.MIN_VALUE
+    val fb = b.optJSONObject("parsed")?.optInt("finalFen", Int.MIN_VALUE) ?: Int.MIN_VALUE
+    if (fa != fb || fa == Int.MIN_VALUE) return false
+    return Math.abs(b.optLong("capturedAt") - a.optLong("capturedAt")) < COALESCE_WINDOW_MS
   }
 
   fun all(context: Context): JSONArray = synchronized(lock) { readArray(context) }

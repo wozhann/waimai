@@ -36,10 +36,6 @@ class WaimaiCaptureService : AccessibilityService() {
         listOf("提交订单", "去支付", "确认下单", "立即支付", "需支付", "实付", "合计")
 
     private const val MIN_INTERVAL_MS = 1500L
-    // A checkout page re-renders many times per second as it loads/animates.
-    // Within this window, frames that resolve to the same app + payable are
-    // treated as the same capture (avoids dozens of near-duplicate records).
-    private const val DEDUP_WINDOW_MS = 20000L
   }
 
   private var lastCaptureAt = 0L
@@ -61,15 +57,16 @@ class WaimaiCaptureService : AccessibilityService() {
     val joined = texts.joinToString(" ") { it.optString("text") }
     if (CHECKOUT_HINTS.none { joined.contains(it) }) return
 
+    // Skip when the screen text is unchanged; otherwise throttle how often we
+    // process frames. CaptureStore then coalesces same-app/same-price frames into
+    // a single card (keeping the latest, most settled read).
+    val signature = joined.hashCode().toString()
+    if (signature == lastSignature) return
     val now = System.currentTimeMillis()
     if (now - lastCaptureAt < MIN_INTERVAL_MS) return
-    val parsed = AmountParser.parse(texts)
-    // Coarse signature: same app + same parsed payable (+ rough text size) is the
-    // same order. Collapse the rapid re-render frames into one record.
-    val signature = "$pkg|" + parsed.optInt("finalFen", -1) + "|" + joined.length
-    if (signature == lastSignature && now - lastCaptureAt < DEDUP_WINDOW_MS) return
     lastCaptureAt = now
     lastSignature = signature
+    val parsed = AmountParser.parse(texts)
 
     val record =
         JSONObject().apply {
