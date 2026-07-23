@@ -14,14 +14,11 @@ import type { CapturedOrder, ParsedBreakdown } from '../capture/types';
 
 /** Labelled rows to render a parsed breakdown in a stable, readable order. */
 const FIELDS: { key: keyof ParsedBreakdown; label: string; discount?: boolean }[] = [
-  { key: 'subtotalFen', label: '商品小计' },
-  { key: 'manjianFen', label: '满减', discount: true },
-  { key: 'hongbaoFen', label: '红包', discount: true },
-  { key: 'couponFen', label: '优惠券', discount: true },
-  { key: 'deliveryFen', label: '配送费' },
+  { key: 'subtotalFen', label: '商品金额' },
   { key: 'packagingFen', label: '打包费' },
-  { key: 'memberFen', label: '会员优惠', discount: true },
-  { key: 'finalFen', label: '实付', discount: false },
+  { key: 'deliveryFen', label: '配送费' },
+  { key: 'savingsFen', label: '共减', discount: true },
+  { key: 'finalFen', label: '到手价', discount: false },
 ];
 
 export function CaptureScreen() {

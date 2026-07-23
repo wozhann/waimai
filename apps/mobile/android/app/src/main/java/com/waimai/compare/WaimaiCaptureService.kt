@@ -36,6 +36,10 @@ class WaimaiCaptureService : AccessibilityService() {
         listOf("提交订单", "去支付", "确认下单", "立即支付", "需支付", "实付", "合计")
 
     private const val MIN_INTERVAL_MS = 1500L
+    // A checkout page re-renders many times per second as it loads/animates.
+    // Within this window, frames that resolve to the same app + payable are
+    // treated as the same capture (avoids dozens of near-duplicate records).
+    private const val DEDUP_WINDOW_MS = 20000L
   }
 
   private var lastCaptureAt = 0L
@@ -58,9 +62,12 @@ class WaimaiCaptureService : AccessibilityService() {
     if (CHECKOUT_HINTS.none { joined.contains(it) }) return
 
     val now = System.currentTimeMillis()
-    val signature = joined.hashCode().toString()
-    // Debounce: window content fires rapidly; skip identical back-to-back frames.
-    if (now - lastCaptureAt < MIN_INTERVAL_MS && signature == lastSignature) return
+    if (now - lastCaptureAt < MIN_INTERVAL_MS) return
+    val parsed = AmountParser.parse(texts)
+    // Coarse signature: same app + same parsed payable (+ rough text size) is the
+    // same order. Collapse the rapid re-render frames into one record.
+    val signature = "$pkg|" + parsed.optInt("finalFen", -1) + "|" + joined.length
+    if (signature == lastSignature && now - lastCaptureAt < DEDUP_WINDOW_MS) return
     lastCaptureAt = now
     lastSignature = signature
 
@@ -71,7 +78,7 @@ class WaimaiCaptureService : AccessibilityService() {
           put("appLabel", label)
           put("capturedAt", now)
           put("texts", JSONArray(texts as Collection<*>))
-          put("parsed", AmountParser.parse(texts))
+          put("parsed", parsed)
         }
     CaptureStore.add(applicationContext, record)
     LiveCaptureModule.emitCapture(record)
@@ -96,7 +103,9 @@ class WaimaiCaptureService : AccessibilityService() {
           JSONObject().apply {
             put("text", value)
             put("top", rect.top)
+            put("bottom", rect.bottom)
             put("left", rect.left)
+            put("right", rect.right)
             node.viewIdResourceName?.let { put("id", it) }
           })
     }
