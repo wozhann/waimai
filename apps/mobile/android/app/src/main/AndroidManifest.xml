@@ -10,6 +10,12 @@
       <category android:name="android.intent.category.BROWSABLE"/>
       <data android:scheme="https"/>
     </intent>
+    <!-- So getLaunchIntentForPackage can see these delivery apps on Android 11+. -->
+    <package android:name="com.sankuai.meituan.takeoutnew"/>
+    <package android:name="com.sankuai.meituan"/>
+    <package android:name="me.ele"/>
+    <package android:name="com.taobao.taobao"/>
+    <package android:name="com.jingdong.app.mall"/>
   </queries>
   <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false">
     <meta-data android:name="expo.modules.updates.ENABLED" android:value="false"/>
